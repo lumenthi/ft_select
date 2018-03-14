@@ -6,7 +6,7 @@
 /*   By: lumenthi <marvin@42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2018/02/08 11:22:09 by lumenthi          #+#    #+#             */
-/*   Updated: 2018/03/12 16:58:29 by lumenthi         ###   ########.fr       */
+/*   Updated: 2018/03/14 21:25:59 by lumenthi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,6 +24,9 @@ typedef struct		s_elem
 	int		len;
 	int		select;
 }					t_elem;
+
+int	ttyfd;
+struct termios *bu;
 
 # include "../libft/libft.h"
 # include <termios.h>

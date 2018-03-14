@@ -6,14 +6,12 @@
 /*   By: lumenthi <marvin@42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2018/03/09 17:50:10 by lumenthi          #+#    #+#             */
-/*   Updated: 2018/03/12 17:35:31 by lumenthi         ###   ########.fr       */
+/*   Updated: 2018/03/14 22:14:20 by lumenthi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../includes/ft_select.h"
-
-struct termios *BU = NULL;
-int				ttyfd = 0;
+#include <fcntl.h>
 
 int		my_outc(int c)
 {
@@ -21,25 +19,25 @@ int		my_outc(int c)
 	return (1);
 }
 
-void	stophandler(int sig)
+void	ft_put(char *str)
 {
-	(void)sig;
-	ft_putendl("stop");
-//	tputs(tgetstr("ve", NULL), ttyfd, my_outc);
-	tputs(tgetstr("te", NULL), ttyfd, my_outc);
-	tcsetattr(0, 0, BU);
+	tputs(tgetstr(str, NULL), ttyfd, my_outc);
+}
+
+void	term_reset(void)
+{
+	ft_put("ve");
+	ft_put("te");
+	tcsetattr(0, 0, bu);
 	close(ttyfd);
-	signal(SIGTSTP, SIG_DFL);
+	free(bu);
 }
 
 void	crashhandler(int sig)
 {
 	(void)sig;
 	ft_putendl("crash");
-	tputs(tgetstr("ve", NULL), ttyfd, my_outc);
-	tputs(tgetstr("te", NULL), ttyfd, my_outc);
-	tcsetattr(0, 0, BU);
-	close(ttyfd);
+	term_reset();
 	exit(1);
 }
 
@@ -58,13 +56,13 @@ char	*gnl(void)
 
 	line = NULL;
 	i = 0;
-	tputs(tgetstr("ks", NULL), ttyfd, my_outc);
+	ft_put("ks"); // transmettre keypad
 	read(ttyfd, buf, 3);
-	tputs(tgetstr("ke", NULL), ttyfd, my_outc);
-//	put_buf(buf);
+	ft_put("ke"); // fin reception keypad
+//	put_buf(buf); // afficher valeur touches
 	if (buf[0] == 27 && buf[1] == 79 && buf[2] == 65)
 		return ("up");
-	if (buf[0] == 27 && buf[1] == 0 && buf[2] == 0)
+	if ((buf[0] == 27 && buf[1] == 0 && buf[2] == 0) || buf[0] == 'q')
 		return ("echap");
 	if (buf[0] == 27 && buf[1] == 79 && buf[2] == 66)
 		return ("down");
@@ -97,79 +95,125 @@ t_elem	**make_elems(int argc, char **argv)
 	return (elems);
 }
 
-#include <fcntl.h>
-void	ft_put(char *str)
+void	term_init(void)
 {
-	tputs(tgetstr(str, NULL), ttyfd, my_outc);
-}
+	char			*name_term;
+	struct	termios	*term;
 
-int		main(int argc, char **argv)
-{
-	char	*name_term;
-	struct	termios *term = malloc(sizeof(struct termios));
-	char	*line = NULL;
-	t_elem	**elems = NULL;
-	int		i = 0;
-
-	elems = make_elems(argc, argv);
-	BU = malloc(sizeof(struct termios));
+	term = malloc(sizeof(struct termios));
+	bu = malloc(sizeof(struct termios));
 	name_term = getenv("TERM");
 	tgetent(NULL, name_term);
-	tcgetattr(0, BU);
+	tcgetattr(0, bu);
 	tcgetattr(0, term);
-	signal(SIGINT, crashhandler);
-	signal(SIGSEGV, crashhandler);
-	signal(SIGTSTP, stophandler);
-	(void)argc;
 	term->c_lflag &= ~(ICANON);
 	term->c_lflag &= ~(ECHO);
 	term->c_cc[VMIN] = 1;
 	term->c_cc[VTIME] = 0;
 	ttyfd = open("/dev/tty", O_RDWR);
 	tcsetattr(0, TCSADRAIN, term);
-	tputs(tgetstr("ti", NULL), ttyfd, my_outc);
-	tputs(tgetstr("vi", NULL), ttyfd, my_outc);
-	tputs(tgetstr("cl", NULL), ttyfd, my_outc);
-//	tputs(tgetstr("db", NULL), ttyfd, my_outc);
-	argv++;
-//	tputs(tgetstr("us", NULL), ttyfd, my_outc);
+	ft_put("ti"); //debut programme deplacement curseur
+	ft_put("vi"); //invisible cursor
+	ft_put("cl"); //clear
+	free(term);
+}
+
+void	return_values(t_elem **elems)
+{
+	int		i;
+
+	i = 0;
 	while (elems[i])
 	{
-		ft_putendl_fd(elems[i]->name, ttyfd);
+		if (elems[i]->select == 1)
+		{
+			ft_putstr(elems[i]->name);
+			ft_putstr(" ");
+		}
+		i++;
+	}
+}
+
+/*void	cursor_on(char *str)
+{
+	ft_put("ce"); // clear from cursor to end line, better use 'ec' for n char
+
+}
+
+void	selected(char *str)
+{
+
+}
+
+void	nothing(char *str)
+{
+
+}
+
+void	cursor_selected(char *str)
+{
+
+}
+*/
+int		main(int argc, char **argv)
+{
+	char	*line = NULL;
+	t_elem	**elems = NULL;
+	int		i = 0;
+
+	term_init();
+	elems = make_elems(argc, argv);
+	signal(SIGINT, crashhandler);
+	signal(SIGSEGV, crashhandler);
+	(void)argc;
+	argv++;
+	while (elems[i])
+	{
+		ft_putstr_fd(elems[i]->name, ttyfd);
+		ft_putstr_fd("		", ttyfd);
 		i++;
 	}
 	i = 0;
-	tputs(tgoto(tgetstr("cm", NULL), 0, 0), ttyfd, my_outc);
-	ft_put("ce");
-	ft_put("us");
-	ft_putstr_fd(elems[i]->name, ttyfd);
-	ft_put("cr");
-	ft_put("ue");
-//	tputs(tgetstr("ue", NULL), ttyfd, my_outc);
-//	tputs(tgetstr("mr", NULL), ttyfd, my_outc);
-//	ft_putendl("TEST");
-//	tputs(tgetstr("me", NULL), ttyfd, my_outc);
+	tputs(tgoto(tgetstr("cm", NULL), 0, 0), ttyfd, my_outc); //cursor 0;0
 	while (1)
 	{
 		line = gnl();
 		if (line && ft_strcmp(line, "up") == 0)
 		{
-			ft_put("cr");
+			ft_put("cr"); //move cursor beginning line
 			if (elems[i]->select == 0)
 			{
-				ft_put("ce");
+				ft_put("ce"); //clear all line cursor is on
 				ft_putstr_fd(elems[i]->name, ttyfd);
 				ft_put("cr");
 			}
+			else
+			{
+				ft_put("ce");
+				ft_put("mr"); //highlight mode on
+				ft_putstr_fd(elems[i]->name, ttyfd);
+				ft_put("me"); //highlight mode off
+				ft_put("cr");
+			}
 			i--;
-			tputs(tgetstr("up", NULL), ttyfd, my_outc);
+			tputs(tgetstr("up", NULL), ttyfd, my_outc); //move cursor up 1 line
 			if (elems[i]->select == 0)
 			{
 				ft_put("ce");
-				ft_put("us");
+				ft_put("us"); //underline mode on
 				ft_putstr_fd(elems[i]->name, ttyfd);
 				ft_put("cr");
+				ft_put("ue"); //underline mode off
+			}
+			else
+			{
+				ft_put("ce");
+				ft_put("us");
+				ft_put("mr");
+				ft_putstr_fd(elems[i]->name, ttyfd);
+				ft_put("me");
 				ft_put("ue");
+				ft_put("cr");
 			}
 		}
 		if (line && ft_strcmp(line, "down") == 0)
@@ -179,6 +223,14 @@ int		main(int argc, char **argv)
 			{
 				ft_put("ce");
 				ft_putstr_fd(elems[i]->name, ttyfd);
+				ft_put("cr");
+			}
+			else
+			{
+				ft_put("ce");
+				ft_put("mr");
+				ft_putstr_fd(elems[i]->name, ttyfd);
+				ft_put("me");
 				ft_put("cr");
 			}
 			i++;
@@ -191,6 +243,16 @@ int		main(int argc, char **argv)
 				ft_put("cr");
 				ft_put("ue");
 			}
+			else
+			{
+				ft_put("ce");
+				ft_put("us");
+				ft_put("mr");
+				ft_putstr_fd(elems[i]->name, ttyfd);
+				ft_put("me");
+				ft_put("ue");
+				ft_put("cr");
+			}
 		}
 		if (line && ft_strcmp(line, "right") == 0)
 			tputs(tgetstr("nd", NULL), ttyfd, my_outc);
@@ -202,9 +264,11 @@ int		main(int argc, char **argv)
 			{
 				tputs(tgetstr("ce", NULL), ttyfd, my_outc);
 				tputs(tgetstr("mr", NULL), ttyfd, my_outc);
+				ft_put("us");
 				ft_putstr_fd(elems[i]->name, ttyfd);
 				elems[i]->select = 1;
 				ft_put("cr");
+				ft_put("ue");
 				tputs(tgetstr("me", NULL), ttyfd, my_outc);
 			}
 			else
@@ -220,9 +284,7 @@ int		main(int argc, char **argv)
 		if (line && ft_strcmp(line, "echap") == 0)
 			break ;
 	}
-	tputs(tgetstr("ve", NULL), ttyfd, my_outc);
-	tputs(tgetstr("te", NULL), ttyfd, my_outc);
-	tcsetattr(0, 0, BU);
-	close(ttyfd);
+	term_reset();
+	return_values(elems);
 	return (0);
 }
