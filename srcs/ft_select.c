@@ -6,7 +6,7 @@
 /*   By: lumenthi <marvin@42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2018/03/09 17:50:10 by lumenthi          #+#    #+#             */
-/*   Updated: 2018/03/15 19:12:42 by lumenthi         ###   ########.fr       */
+/*   Updated: 2018/03/15 23:25:07 by lumenthi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,6 +24,15 @@ void	ft_put(char *str)
 	tputs(tgetstr(str, NULL), data->ttyfd, my_outc);
 }
 
+void	get_winsize(void)
+{
+	struct winsize w;
+
+	ioctl(0, TIOCGWINSZ, &w);// ;get winsize
+	data->w_row = w.ws_row;
+	data->w_col = w.ws_col;
+}
+
 void	term_reset(void)
 {
 	ft_put("ve"); //make cursor visible again
@@ -35,14 +44,6 @@ void	term_reset(void)
 	free(data->bu);
 	free(data->cursor);
 	free(data);
-}
-
-void	crashhandler(int sig)
-{
-	(void)sig;
-	term_reset();
-	ft_putendl("crash or exit");
-	exit(1);
 }
 
 /*void	put_buf(char *buf)
@@ -104,15 +105,6 @@ t_elem	**make_elems(int argc, char **argv)
 	return (elems);
 }
 
-void	get_winsize(void)
-{
-	struct winsize w;
-
-	ioctl(0, TIOCGWINSZ, &w);// ;get winsize
-	data->w_row = w.ws_row;
-	data->w_col = w.ws_col;
-}
-
 void	term_init(void)
 {
 	char			*name_term;
@@ -122,6 +114,7 @@ void	term_init(void)
 	term = malloc(sizeof(struct termios));
 	data->bu = malloc(sizeof(struct termios));
 	data->cursor = malloc(sizeof(t_cursor));
+	data->current = 0;
 	name_term = getenv("TERM");
 	tgetent(NULL, name_term);
 	tcgetattr(0, data->bu);
@@ -200,96 +193,132 @@ void	move_cursor(int x, int y)
 void	display_elems(t_elem **elems, int s, int x)
 {
 	int	i;
+	int	current_max;
 
 	i = 0;
+	current_max = 0;
 	move_cursor(0, 0);
+	data->current = 0;
 	data->w_row--;
+	while (elems[s + i])
+	{
+		if (elems[s + i]->len > current_max)
+			current_max = elems[s + i]->len;
+		i++;
+	}
+	i = 0;
+	data->w_row++;
 	while (elems[s + i])
 	{
 		if (i < data->w_row)
 		{
-			if (s + i >= data->w_row)
+			move_cursor(x, data->cursor->y);
+			if (s + i == 0)
 			{
-				move_cursor(x, data->cursor->y);
-				ft_putstr_fd(elems[s + i]->name, data->ttyfd);
-				data->cursor->y++;
+				if (elems[s + i]->select == 0)
+					cursor_on(elems[s + i]);
+				else
+					cursor_selected(elems[s + i]);
 			}
 			else
-				ft_putendl_fd(elems[s + i]->name, data->ttyfd);
+			{
+				if (elems[s + i]->select == 0)
+					ft_putstr_fd(elems[s + i]->name, data->ttyfd);
+				else
+					selected(elems[s + i]);
+			}
+			data->cursor->y++;
 		}
 		else
 		{
 			s = s + data->w_row;
-			data->w_row++;
 			x = x + data->max_spaces;
-			if (elems[s + 1])
+			if (elems[s + 1] && (x + current_max) <= data->w_col)
 				display_elems(elems, s, x);
+			else if (elems[s + 1] && (x + current_max) >= data->w_col)
+			{
+				ft_put("cl");
+				ft_putendl_fd("Screen is too small", data->ttyfd);
+			}
 			break ;
 		}
 		i++;
 	}
 	move_cursor(0, 0);
-	cursor_on(elems[0]);
 }
 
-void	ft_move(char str, t_elem **elems, int *i)
+void	crashhandler(int sig)
 {
-	if (elems[*i]->select == 0)
-		nothing(elems[*i]);
+	if (sig == 28)
+	{
+		ft_put("cl");
+		get_winsize();
+		display_elems(elems, 0, 0);
+	}
 	else
-		selected(elems[*i]);
+	{
+		term_reset();
+		ft_putendl("crash or exit");
+		exit(1);
+	}
+}
+
+void	ft_move(char str, t_elem **elems)
+{
+	if (elems[data->current]->select == 0)
+		nothing(elems[data->current]);
+	else
+		selected(elems[data->current]);
 	if (str == 'r')
 	{
 		move_cursor(data->cursor->x + data->max_spaces, data->cursor->y);
-		*i = *i + data->w_row;
+		data->current = data->current + data->w_row;
 	}
 	if (str == 'l')
 	{
-		*i = *i - data->w_row;
+		data->current = data->current - data->w_row;
 		move_cursor(data->cursor->x - data->max_spaces, data->cursor->y);
 	}
 	if (str == 'd')
 	{
-		(*i)++;
+		data->current++;
 		move_cursor(data->cursor->x, data->cursor->y + 1);
 	}
 	if (str == 'u')
 	{
-		(*i)--;
+		data->current--;
 		move_cursor(data->cursor->x, data->cursor->y - 1);
 	}
-	if (elems[*i]->select == 1)
-		cursor_selected(elems[*i]);
+	if (elems[data->current]->select == 1)
+		cursor_selected(elems[data->current]);
 	else
-		cursor_on(elems[*i]);
+		cursor_on(elems[data->current]);
 }
 
-void	ft_select(t_elem **elems, int *i)
+void	ft_select(t_elem **elems)
 {
-	if (elems[*i]->select == 0)
+	if (elems[data->current]->select == 0)
 	{
-		cursor_selected(elems[*i]);
-		elems[*i]->select = 1;
-		ft_move('r', elems, i);
+		cursor_selected(elems[data->current]);
+		elems[data->current]->select = 1;
+		ft_move('r', elems);
 	}
 	else
 	{
-		cursor_on(elems[*i]);
-		elems[*i]->select = 0;
+		cursor_on(elems[data->current]);
+		elems[data->current]->select = 0;
 	}
 }
 
 int		main(int argc, char **argv)
 {
 	char	*line;
-	t_elem	**elems;
-	int		i;
 
-	i = 0;
 	line = NULL;
 	elems = NULL;
 	signal(SIGINT, crashhandler);
 	signal(SIGSEGV, crashhandler);
+	signal(SIGWINCH, crashhandler);
 	term_init();
 	elems = make_elems(argc, argv);
 	ft_put("cl");
@@ -298,15 +327,15 @@ int		main(int argc, char **argv)
 	{
 		line = gnl();
 		if (line && ft_strcmp(line, "right") == 0)
-			ft_move('r', elems, &i);
+			ft_move('r', elems);
 		if (line && ft_strcmp(line, "left") == 0)
-			ft_move('l', elems, &i);
+			ft_move('l', elems);
 		if (line && ft_strcmp(line, "up") == 0)
-			ft_move('u', elems, &i);
+			ft_move('u', elems);
 		if (line && ft_strcmp(line, "down") == 0)
-			ft_move('d', elems, &i);
+			ft_move('d', elems);
 		if (line && ft_strcmp(line, "space") == 0)
-			ft_select(elems, &i);
+			ft_select(elems);
 		if (line && ft_strcmp(line, "enter") == 0)
 			break ;
 		if (line && ft_strcmp(line, "echap") == 0)

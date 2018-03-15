@@ -6,7 +6,7 @@
 /*   By: lumenthi <marvin@42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2018/02/08 11:22:09 by lumenthi          #+#    #+#             */
-/*   Updated: 2018/03/15 14:04:07 by lumenthi         ###   ########.fr       */
+/*   Updated: 2018/03/15 22:33:41 by lumenthi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -32,6 +32,7 @@ typedef struct		s_properties
 	int				w_col;
 	t_cursor		*cursor;
 	int				max_spaces;
+	int				current;
 }					t_properties;
 
 typedef struct		s_elem
@@ -41,7 +42,8 @@ typedef struct		s_elem
 	int		select;
 }					t_elem;
 
-t_properties *data;
+t_properties	*data;
+t_elem			**elems;
 
 # include "../libft/libft.h"
 # include <termios.h>
