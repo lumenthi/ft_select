@@ -6,7 +6,7 @@
 /*   By: lumenthi <marvin@42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2018/02/08 11:22:09 by lumenthi          #+#    #+#             */
-/*   Updated: 2018/03/15 10:35:54 by lumenthi         ###   ########.fr       */
+/*   Updated: 2018/03/15 14:04:07 by lumenthi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -31,6 +31,7 @@ typedef struct		s_properties
 	int				w_row;
 	int				w_col;
 	t_cursor		*cursor;
+	int				max_spaces;
 }					t_properties;
 
 typedef struct		s_elem

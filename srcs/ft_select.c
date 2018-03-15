@@ -6,7 +6,7 @@
 /*   By: lumenthi <marvin@42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2018/03/09 17:50:10 by lumenthi          #+#    #+#             */
-/*   Updated: 2018/03/15 12:52:37 by lumenthi         ###   ########.fr       */
+/*   Updated: 2018/03/15 19:12:42 by lumenthi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -30,6 +30,8 @@ void	term_reset(void)
 	ft_put("te"); //fin du programme deplacement curseur
 	tcsetattr(0, 0, data->bu);
 	close(data->ttyfd);
+	printf("w_col = %d\n", data->w_col);
+	printf("w_row = %d\n", data->w_row);
 	free(data->bu);
 	free(data->cursor);
 	free(data);
@@ -85,6 +87,7 @@ t_elem	**make_elems(int argc, char **argv)
 	int		i;
 
 	i = 0;
+	data->max_spaces = 0;
 	elems = (t_elem **)malloc(sizeof(t_elem *) * argc);
 	argv++;
 	while (argv[i])
@@ -93,6 +96,8 @@ t_elem	**make_elems(int argc, char **argv)
 		elems[i]->name = ft_strdup(argv[i]);
 		elems[i]->len = ft_strlen(argv[i]);
 		elems[i]->select = 0;
+		if (data->max_spaces < elems[i]->len)
+			data->max_spaces = elems[i]->len + 2;
 		i++;
 	}
 	elems[i] = NULL;
@@ -192,29 +197,35 @@ void	move_cursor(int x, int y)
 	data->cursor->y = y;
 }
 
-void	display_elems(t_elem **elems)
+void	display_elems(t_elem **elems, int s, int x)
 {
 	int	i;
-	int	len;
 
 	i = 0;
-	len = 0;
-	ft_put("cl"); //clear screen
 	move_cursor(0, 0);
-	while (elems[i])
+	data->w_row--;
+	while (elems[s + i])
 	{
-		len = len + elems[i]->len;
-//		len++;
-//		dprintf(data->ttyfd, "len: %d", len);
-//		dprintf(data->ttyfd, "max: %d\n", data->w_col);
-		if (len > data->w_col)
+		if (i < data->w_row)
 		{
-//			move_cursor(0, data->cursor->y + 1);
-			len = 0;
-			ft_putstr_fd("\n", data->ttyfd);
+			if (s + i >= data->w_row)
+			{
+				move_cursor(x, data->cursor->y);
+				ft_putstr_fd(elems[s + i]->name, data->ttyfd);
+				data->cursor->y++;
+			}
+			else
+				ft_putendl_fd(elems[s + i]->name, data->ttyfd);
 		}
-		ft_putstr_fd(elems[i]->name, data->ttyfd);
-		ft_putstr_fd(" ", data->ttyfd);
+		else
+		{
+			s = s + data->w_row;
+			data->w_row++;
+			x = x + data->max_spaces;
+			if (elems[s + 1])
+				display_elems(elems, s, x);
+			break ;
+		}
 		i++;
 	}
 	move_cursor(0, 0);
@@ -223,25 +234,29 @@ void	display_elems(t_elem **elems)
 
 void	ft_move(char str, t_elem **elems, int *i)
 {
-	int		len;
-	
 	if (elems[*i]->select == 0)
 		nothing(elems[*i]);
 	else
 		selected(elems[*i]);
 	if (str == 'r')
 	{
-		len = elems[*i]->len + 1; // remplacer + 1 par espace entre mots;
-		move_cursor((data->cursor->x + len), data->cursor->y);
-		(*i)++;
+		move_cursor(data->cursor->x + data->max_spaces, data->cursor->y);
+		*i = *i + data->w_row;
 	}
 	if (str == 'l')
 	{
-		ft_put("rc");
+		*i = *i - data->w_row;
+		move_cursor(data->cursor->x - data->max_spaces, data->cursor->y);
+	}
+	if (str == 'd')
+	{
+		(*i)++;
+		move_cursor(data->cursor->x, data->cursor->y + 1);
+	}
+	if (str == 'u')
+	{
 		(*i)--;
-		len = elems[*i]->len + 1; // remplacer + 1 par espace entre mots;
-		while (len--)
-			move_cursor((data->cursor->x - 1), data->cursor->y);
+		move_cursor(data->cursor->x, data->cursor->y - 1);
 	}
 	if (elems[*i]->select == 1)
 		cursor_selected(elems[*i]);
@@ -249,17 +264,18 @@ void	ft_move(char str, t_elem **elems, int *i)
 		cursor_on(elems[*i]);
 }
 
-void	ft_select(t_elem *elems)
+void	ft_select(t_elem **elems, int *i)
 {
-	if (elems->select == 0)
+	if (elems[*i]->select == 0)
 	{
-		cursor_selected(elems);
-		elems->select = 1;
+		cursor_selected(elems[*i]);
+		elems[*i]->select = 1;
+		ft_move('r', elems, i);
 	}
 	else
 	{
-		cursor_on(elems);
-		elems->select = 0;
+		cursor_on(elems[*i]);
+		elems[*i]->select = 0;
 	}
 }
 
@@ -276,7 +292,8 @@ int		main(int argc, char **argv)
 	signal(SIGSEGV, crashhandler);
 	term_init();
 	elems = make_elems(argc, argv);
-	display_elems(elems);
+	ft_put("cl");
+	display_elems(elems, 0, 0);
 	while (1)
 	{
 		line = gnl();
@@ -284,8 +301,12 @@ int		main(int argc, char **argv)
 			ft_move('r', elems, &i);
 		if (line && ft_strcmp(line, "left") == 0)
 			ft_move('l', elems, &i);
+		if (line && ft_strcmp(line, "up") == 0)
+			ft_move('u', elems, &i);
+		if (line && ft_strcmp(line, "down") == 0)
+			ft_move('d', elems, &i);
 		if (line && ft_strcmp(line, "space") == 0)
-			ft_select(elems[i]);
+			ft_select(elems, &i);
 		if (line && ft_strcmp(line, "enter") == 0)
 			break ;
 		if (line && ft_strcmp(line, "echap") == 0)
