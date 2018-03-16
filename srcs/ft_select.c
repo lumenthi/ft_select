@@ -6,7 +6,7 @@
 /*   By: lumenthi <marvin@42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2018/03/09 17:50:10 by lumenthi          #+#    #+#             */
-/*   Updated: 2018/03/16 12:33:59 by lumenthi         ###   ########.fr       */
+/*   Updated: 2018/03/16 14:44:17 by lumenthi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -41,14 +41,15 @@ void	term_reset(void)
 	close(g_data->ttyfd);
 	free(g_data->bu);
 	free(g_data->cursor);
-	free(g_data->elems);
 	free(g_data);
 }
 
 /*void	put_buf(char *buf)
 {
 	ft_putnbr(buf[0]);
+	ft_putchar(',');
 	ft_putnbr(buf[1]);
+	ft_putchar(',');
 	ft_putnbr(buf[2]);
 }*/
 
@@ -56,10 +57,8 @@ char	*gnl(void)
 {
 	char	*line;
 	char	buf[3];
-	int		i;
 
 	line = NULL;
-	i = 0;
 	ft_put("ks"); // transmettre keypad
 	read(g_data->ttyfd, buf, 3);
 	ft_put("ke"); // fin reception keypad
@@ -78,6 +77,8 @@ char	*gnl(void)
 		return ("left");
 	if (buf[0] == 32 && buf[1] == 0 && buf[2] == 0)
 		return ("space");
+	if (buf[0] == 127 && buf[1] == 0 && buf[2] == 0)
+		return ("del");
 	return (NULL);
 }
 
@@ -265,7 +266,7 @@ int		elem_size(t_elem **elems)
 	i = 0;
 	while (elems[i])
 		i++;
-	return (i);
+	return (i - 1);
 }
 
 int		max_col(int size)
@@ -283,22 +284,38 @@ int		max_row(int size)
 	if (size < g_data->w_row)
 		return (size);
 	else
-		return ((size / max_col(size + 1)) - 1);
+		return (size / max_col(size));
+}
+
+int		get_last(int size)
+{
+	int last;
+
+	last = size % g_data->w_row;
+	return (last);
 }
 
 void	ft_move(char str, t_elem **elems)
 {
+	int	col;
+	int	row;
+	int	size;
+	int	last;
+
+	size = elem_size(elems);
+	col = max_col(size);
+	row = max_row(size);
+	last = get_last(size);
 	if (elems[g_data->current]->select == 0)
 		nothing(elems[g_data->current]);
 	else
 		selected(elems[g_data->current]);
 	if (str == 'r')
 	{
-		if (g_data->cursor->x == (max_col(elem_size(elems)) -1) * g_data->max_spaces)
+		if (g_data->cursor->x == col * g_data->max_spaces)
 		{
 			move_cursor(0, g_data->cursor->y);
-			g_data->current = g_data->current - g_data->w_row *
-				(max_col(elem_size(elems)) - 1);
+			g_data->current = g_data->current - g_data->w_row * col;
 		}
 		else
 		{
@@ -310,10 +327,8 @@ void	ft_move(char str, t_elem **elems)
 	{
 		if (g_data->cursor->x == 0)
 		{
-			g_data->current = g_data->current + g_data->w_row *
-				(max_col(elem_size(elems)) - 1);
-			move_cursor((max_col(elem_size(elems)) -1) * g_data->max_spaces,
-				g_data->cursor->y);
+			g_data->current = g_data->current + g_data->w_row * col;
+			move_cursor(col * g_data->max_spaces, g_data->cursor->y);
 		}
 		else
 		{
@@ -323,7 +338,7 @@ void	ft_move(char str, t_elem **elems)
 	}
 	if (str == 'd')
 	{
-		if (g_data->current == elem_size(elems) - 1)
+		if (g_data->current == size)
 		{
 			move_cursor(0, 0);
 			g_data->current = 0;
@@ -341,9 +356,8 @@ void	ft_move(char str, t_elem **elems)
 	{
 		if (g_data->current == 0)
 		{
-			g_data->current = elem_size(elems) - 1;
-			move_cursor((max_col(elem_size(elems)) -1) * g_data->max_spaces,
-				max_row(elem_size(elems)));
+			g_data->current = size;
+			move_cursor(col * g_data->max_spaces, last);
 		}
 		else
 		{
@@ -360,12 +374,20 @@ void	ft_move(char str, t_elem **elems)
 		cursor_on(elems[g_data->current]);
 }
 
-void	ft_select(t_elem **elems)
+void	ft_select(t_elem **elems, char key)
 {
-	if (elems[g_data->current]->select == 0)
+	if (key == 's')
 	{
-		cursor_selected(elems[g_data->current]);
-		elems[g_data->current]->select = 1;
+		if (elems[g_data->current]->select == 0)
+		{
+			cursor_selected(elems[g_data->current]);
+			elems[g_data->current]->select = 1;
+		}
+		else
+		{
+			cursor_on(elems[g_data->current]);
+			elems[g_data->current]->select = 0;
+		}
 		ft_move('d', elems);
 	}
 	else
@@ -399,7 +421,9 @@ int		main(int argc, char **argv)
 		if (line && ft_strcmp(line, "down") == 0)
 			ft_move('d', g_data->elems);
 		if (line && ft_strcmp(line, "space") == 0)
-			ft_select(g_data->elems);
+			ft_select(g_data->elems, 's');
+		if (line && ft_strcmp(line, "del") == 0)
+			ft_select(g_data->elems, 'd');
 		if (line && ft_strcmp(line, "enter") == 0)
 			break ;
 		if (line && ft_strcmp(line, "echap") == 0)
