@@ -6,7 +6,7 @@
 /*   By: lumenthi <marvin@42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2018/03/09 17:50:10 by lumenthi          #+#    #+#             */
-/*   Updated: 2018/03/15 23:25:07 by lumenthi         ###   ########.fr       */
+/*   Updated: 2018/03/16 10:35:31 by lumenthi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -199,15 +199,13 @@ void	display_elems(t_elem **elems, int s, int x)
 	current_max = 0;
 	move_cursor(0, 0);
 	data->current = 0;
-	data->w_row--;
 	while (elems[s + i])
 	{
 		if (elems[s + i]->len > current_max)
-			current_max = elems[s + i]->len;
+			current_max = elems[s + i]->len - 2;
 		i++;
 	}
 	i = 0;
-	data->w_row++;
 	while (elems[s + i])
 	{
 		if (i < data->w_row)
@@ -263,6 +261,34 @@ void	crashhandler(int sig)
 	}
 }
 
+int		elem_size(t_elem **elems)
+{
+	int i;
+
+	i = 0;
+	while (elems[i])
+		i++;
+	return (i);
+}
+
+int		max_col(int size)
+{
+	int	max;
+	if (size < data->w_row)
+		return (0);
+	max = data->w_col / data->max_spaces;
+	return (max);
+}
+
+int		max_row(int size)
+{
+	size--;
+	if (size < data->w_row)
+		return (size);
+	else
+		return ((size / max_col(size + 1)) - 1);
+}
+
 void	ft_move(char str, t_elem **elems)
 {
 	if (elems[data->current]->select == 0)
@@ -271,23 +297,65 @@ void	ft_move(char str, t_elem **elems)
 		selected(elems[data->current]);
 	if (str == 'r')
 	{
-		move_cursor(data->cursor->x + data->max_spaces, data->cursor->y);
-		data->current = data->current + data->w_row;
+		if (data->cursor->x == (max_col(elem_size(elems)) -1) * data->max_spaces)
+		{
+			move_cursor(0, data->cursor->y);
+			data->current = data->current - data->w_row * 
+				(max_col(elem_size(elems)) - 1);
+		}
+		else
+		{
+			move_cursor(data->cursor->x + data->max_spaces, data->cursor->y);
+			data->current = data->current + data->w_row;
+		}
 	}
 	if (str == 'l')
 	{
-		data->current = data->current - data->w_row;
-		move_cursor(data->cursor->x - data->max_spaces, data->cursor->y);
+		if (data->cursor->x == 0)
+		{
+			data->current = data->current + data->w_row *
+				(max_col(elem_size(elems)) - 1);
+			move_cursor((max_col(elem_size(elems)) -1) * data->max_spaces,
+				data->cursor->y);
+		}
+		else
+		{
+			data->current = data->current - data->w_row;
+			move_cursor(data->cursor->x - data->max_spaces, data->cursor->y);
+		}
 	}
 	if (str == 'd')
 	{
-		data->current++;
-		move_cursor(data->cursor->x, data->cursor->y + 1);
+		if (data->current == elem_size(elems) - 1)
+		{
+			move_cursor(0, 0);
+			data->current = 0;
+		}
+		else
+		{
+			data->current++;
+			if (data->cursor->y == data->w_row - 1)
+				move_cursor(data->cursor->x + data->max_spaces, 0);
+			else
+				move_cursor(data->cursor->x, data->cursor->y + 1);
+		}
 	}
 	if (str == 'u')
 	{
-		data->current--;
-		move_cursor(data->cursor->x, data->cursor->y - 1);
+		if (data->current == 0)
+		{
+			data->current = elem_size(elems) - 1;
+			move_cursor((max_col(elem_size(elems)) -1) * data->max_spaces,
+				max_row(elem_size(elems)));
+		}
+		else
+		{
+			data->current--;
+			if (data->cursor->y == 0)
+				move_cursor(data->cursor->x - data->max_spaces, data->w_row - 1);
+			else
+				move_cursor(data->cursor->x, data->cursor->y - 1);
+		}
 	}
 	if (elems[data->current]->select == 1)
 		cursor_selected(elems[data->current]);
@@ -301,7 +369,7 @@ void	ft_select(t_elem **elems)
 	{
 		cursor_selected(elems[data->current]);
 		elems[data->current]->select = 1;
-		ft_move('r', elems);
+		ft_move('d', elems);
 	}
 	else
 	{
