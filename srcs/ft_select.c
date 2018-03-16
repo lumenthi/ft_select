@@ -6,7 +6,7 @@
 /*   By: lumenthi <marvin@42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2018/03/09 17:50:10 by lumenthi          #+#    #+#             */
-/*   Updated: 2018/03/16 14:44:17 by lumenthi         ###   ########.fr       */
+/*   Updated: 2018/03/16 23:34:08 by lumenthi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -79,7 +79,29 @@ char	*gnl(void)
 		return ("space");
 	if (buf[0] == 127 && buf[1] == 0 && buf[2] == 0)
 		return ("del");
+	if (buf[0] == '+')
+		return ("s_all");
+	if (buf[0] == '-')
+		return ("d_all");
 	return (NULL);
+}
+
+char	*get_color(t_elem *elems)
+{
+	if (elems->name[ft_strlen(elems->name) - 1] == 'c' &&
+		elems->name[ft_strlen(elems->name) - 2] == '.')
+		return (BLUE);
+	else if (elems->name[ft_strlen(elems->name) - 1] == 'h' &&
+		elems->name[ft_strlen(elems->name) - 2] == '.')
+		return (GREEN);
+	else if (elems->name[ft_strlen(elems->name) - 1] == 'a' &&
+		elems->name[ft_strlen(elems->name) - 2] == '.')
+		return (YELLOW);
+	else if (elems->name[ft_strlen(elems->name) - 1] == 'o' &&
+		elems->name[ft_strlen(elems->name) - 2] == '.')
+		return (RED);
+	else
+		return (GRAY);
 }
 
 void	make_elems(int argc, char **argv)
@@ -96,6 +118,7 @@ void	make_elems(int argc, char **argv)
 		g_data->elems[i]->name = ft_strdup(argv[i]);
 		g_data->elems[i]->len = ft_strlen(argv[i]);
 		g_data->elems[i]->select = 0;
+		g_data->elems[i]->color = get_color(g_data->elems[i]);
 		if (g_data->max_spaces < g_data->elems[i]->len)
 			g_data->max_spaces = g_data->elems[i]->len + 2;
 		i++;
@@ -149,7 +172,9 @@ void	cursor_on(t_elem *elems)
 {
 	ft_put("sc"); // save cursor position
 	ft_put("us"); // underline mode on
+	ft_putstr_fd(elems->color, g_data->ttyfd);
 	ft_putstr_fd(elems->name, g_data->ttyfd);
+	ft_putstr_fd(BLANK, g_data->ttyfd);
 	ft_put("ue"); // underline mode off
 	ft_put("rc"); // restore last saved cursor position
 }
@@ -158,7 +183,9 @@ void	selected(t_elem *elems)
 {
 	ft_put("sc");
 	ft_put("mr"); //highlight mode on
+	ft_putstr_fd(elems->color, g_data->ttyfd);
 	ft_putstr_fd(elems->name, g_data->ttyfd);
+	ft_putstr_fd(BLANK, g_data->ttyfd);
 	ft_put("me"); //highlight mode off
 	ft_put("rc");
 }
@@ -168,7 +195,9 @@ void	cursor_selected(t_elem *elems)
 	ft_put("sc");
 	ft_put("mr");
 	ft_put("us");
+	ft_putstr_fd(elems->color, g_data->ttyfd);
 	ft_putstr_fd(elems->name, g_data->ttyfd);
+	ft_putstr_fd(BLANK, g_data->ttyfd);
 	ft_put("ue");
 	ft_put("me");
 	ft_put("rc");
@@ -177,7 +206,9 @@ void	cursor_selected(t_elem *elems)
 void	nothing(t_elem *elems)
 {
 	ft_put("sc");
+	ft_putstr_fd(elems->color, g_data->ttyfd);
 	ft_putstr_fd(elems->name, g_data->ttyfd);
+	ft_putstr_fd(BLANK, g_data->ttyfd);
 	ft_put("rc");
 }
 
@@ -200,7 +231,7 @@ void	display_elems(t_elem **elems, int s, int x)
 	while (elems[s + i])
 	{
 		if (elems[s + i]->len > current_max)
-			current_max = elems[s + i]->len;
+			current_max = elems[s + i]->len - 2;
 		i++;
 	}
 	i = 0;
@@ -219,7 +250,7 @@ void	display_elems(t_elem **elems, int s, int x)
 			else
 			{
 				if (elems[s + i]->select == 0)
-					ft_putstr_fd(elems[s + i]->name, g_data->ttyfd);
+					nothing(elems[s + i]);
 				else
 					selected(elems[s + i]);
 			}
@@ -234,7 +265,9 @@ void	display_elems(t_elem **elems, int s, int x)
 			else if (elems[s + 1] && (x + current_max) >= g_data->w_col)
 			{
 				ft_put("cl");
+				ft_putstr_fd(RED, g_data->ttyfd);
 				ft_putendl_fd("Screen is too small", g_data->ttyfd);
+				ft_putstr_fd(BLANK, g_data->ttyfd);
 			}
 			break ;
 		}
@@ -388,13 +421,44 @@ void	ft_select(t_elem **elems, char key)
 			cursor_on(elems[g_data->current]);
 			elems[g_data->current]->select = 0;
 		}
-		ft_move('d', elems);
 	}
 	else
 	{
 		cursor_on(elems[g_data->current]);
 		elems[g_data->current]->select = 0;
 	}
+	ft_move('d', elems);
+}
+
+void	select_all(t_elem **elems)
+{
+	int		i;
+
+	i = 0;
+	g_data->current = 0;
+	move_cursor(0, 0);
+	while (elems[i])
+	{
+		elems[i]->select = 0;
+		ft_select(g_data->elems, 's');
+		i++;
+	}
+}
+
+void	del_all(t_elem **elems)
+{
+	int		i;
+
+	i = 0;
+	g_data->current = 0;
+	move_cursor(0, 0);
+	while (elems[i])
+	{
+		elems[i]->select = 1;
+		ft_select(g_data->elems, 's');
+		i++;
+	}
+
 }
 
 int		main(int argc, char **argv)
@@ -424,6 +488,10 @@ int		main(int argc, char **argv)
 			ft_select(g_data->elems, 's');
 		if (line && ft_strcmp(line, "del") == 0)
 			ft_select(g_data->elems, 'd');
+		if (line && ft_strcmp(line, "d_all") == 0)
+			del_all(g_data->elems);
+		if (line && ft_strcmp(line, "s_all") == 0)
+			select_all(g_data->elems);
 		if (line && ft_strcmp(line, "enter") == 0)
 			break ;
 		if (line && ft_strcmp(line, "echap") == 0)
