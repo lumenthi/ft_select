@@ -6,7 +6,7 @@
 /*   By: lumenthi <marvin@42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2018/02/08 11:22:09 by lumenthi          #+#    #+#             */
-/*   Updated: 2018/03/16 23:34:12 by lumenthi         ###   ########.fr       */
+/*   Updated: 2018/03/17 21:30:55 by lumenthi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,11 +19,13 @@
 # define RED	"\033[1;31m"
 # define YELLOW "\033[1;33m"
 # define GRAY	"\033[1;37m"
+# define BLACK	"\033[1;90m"
 
 typedef struct		s_cursor
 {
 	int	x;
 	int	y;
+	int	error;
 }					t_cursor;
 
 typedef struct		s_elem
