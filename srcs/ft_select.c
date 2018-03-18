@@ -6,7 +6,7 @@
 /*   By: lumenthi <marvin@42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2018/03/09 17:50:10 by lumenthi          #+#    #+#             */
-/*   Updated: 2018/03/17 21:37:31 by lumenthi         ###   ########.fr       */
+/*   Updated: 2018/03/18 19:20:55 by lumenthi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -251,7 +251,7 @@ int		get_current_max(int s, t_elem **elems)
 	return (current_max);
 }
 
-int		display_elems(t_elem **elems, int s, int x)
+void		display_elems(t_elem **elems, int s, int x)
 {
 	int	i;
 	int	current_max;
@@ -260,6 +260,7 @@ int		display_elems(t_elem **elems, int s, int x)
 	current_max = 0;
 	move_cursor(0, 0);
 	g_data->current = 0;
+	g_data->cursor->error = 0;
 	while (elems[s + i])
 	{
 		if (i < g_data->w_row)
@@ -292,7 +293,7 @@ int		display_elems(t_elem **elems, int s, int x)
 				ft_putstr_fd(RED, g_data->ttyfd);
 				ft_putendl_fd("Screen is too small", g_data->ttyfd);
 				ft_putstr_fd(BLANK, g_data->ttyfd);
-				return (0);
+				g_data->cursor->error = 1;
 			}
 			else if (current_max + x <= g_data->w_col)
 				display_elems(elems, s, x);
@@ -301,7 +302,6 @@ int		display_elems(t_elem **elems, int s, int x)
 		i++;
 	}
 	move_cursor(0, 0);
-	return (1);
 }
 
 void	crashhandler(int sig)
@@ -310,7 +310,7 @@ void	crashhandler(int sig)
 	{
 		ft_put("cl");
 		get_winsize();
-		g_data->cursor->error = display_elems(g_data->elems, 0, 0);
+		display_elems(g_data->elems, 0, 0);
 	}
 	else
 	{
@@ -533,7 +533,7 @@ int		main(int argc, char **argv)
 	}
 	make_elems(argc, argv);
 	ft_put("cl");
-	g_data->cursor->error = display_elems(g_data->elems, 0, 0);
+	display_elems(g_data->elems, 0, 0);
 	while (1)
 	{
 		line = gnl();
