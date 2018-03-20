@@ -6,7 +6,7 @@
 /*   By: lumenthi <marvin@42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2018/03/09 17:50:10 by lumenthi          #+#    #+#             */
-/*   Updated: 2018/03/18 19:20:55 by lumenthi         ###   ########.fr       */
+/*   Updated: 2018/03/20 23:25:33 by lumenthi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -39,9 +39,9 @@ void	term_reset(void)
 	ft_put("te"); // fin du programme deplacement curseur
 	tcsetattr(0, 0, g_data->bu); // set l'ancienne config du terminal
 	close(g_data->ttyfd);
-	free(g_data->bu);
-	free(g_data->cursor);
-	free(g_data);
+//	free(g_data->bu);
+//	free(g_data->cursor);
+//	free(g_data);
 }
 
 /*void	put_buf(char *buf)
@@ -79,7 +79,7 @@ char	*gnl(void)
 			return ("left");
 		if (buf[0] == 32 && buf[1] == 0 && buf[2] == 0)
 			return ("space");
-		if (buf[0] == 127 && buf[1] == 0 && buf[2] == 0)
+		if (buf[0] == 127)
 			return ("del");
 		if (buf[0] == '+')
 			return ("s_all");
@@ -138,6 +138,29 @@ void	make_elems(int argc, char **argv)
 		i++;
 	}
 	g_data->elems[i] = NULL;
+}
+
+int		stop_init(void)
+{
+	char			*name_term;
+	struct	termios	*term;
+
+	if (!(name_term = getenv("TERM"))) // obtention variable TERM
+		return (0);
+	term = malloc(sizeof(struct termios));
+	tgetent(NULL, name_term); // loads termcaps for name_term
+	tcgetattr(0, term); // load term settings in term
+	term->c_lflag &= ~(ICANON); // mode canonique
+	term->c_lflag &= ~(ECHO); // les touches ne s'inscrivent plus
+	term->c_cc[VMIN] = 1; // return valeur de read tous VMIN character
+	term->c_cc[VTIME] = 0; // return valeur de read tous les n delais.
+	g_data->ttyfd = open("/dev/tty", O_RDWR);
+	tcsetattr(0, TCSADRAIN, term); // utilise term comme nouvelle config
+	ft_put("ti"); // debut programme deplacement curseur
+	ft_put("vi"); // invisible cursor
+	get_winsize();
+	free(term);
+	return (1);
 }
 
 int		term_init(void)
@@ -304,15 +327,27 @@ void		display_elems(t_elem **elems, int s, int x)
 	move_cursor(0, 0);
 }
 
-void	crashhandler(int sig)
+void	signal_handler(int sig)
 {
-	if (sig == 28)
+	if (sig == SIGWINCH)
 	{
 		ft_put("cl");
 		get_winsize();
 		display_elems(g_data->elems, 0, 0);
 	}
-	else
+	if (sig == SIGTSTP)
+	{
+		term_reset();
+		signal(SIGTSTP, SIG_DFL);
+		ioctl(STDERR_FILENO, TIOCSTI, "\x1A");
+	}
+	if (sig == SIGCONT)
+	{
+		stop_init();
+		display_elems(g_data->elems, 0, 0);
+	}
+	if (sig == SIGABRT || sig == SIGSTOP || sig == SIGQUIT || sig == SIGKILL ||
+		sig == SIGINT)
 	{
 		term_reset();
 		ft_putendl("crash or exit");
@@ -451,35 +486,54 @@ void	ft_move(char str, t_elem **elems)
 		cursor_on(elems[g_data->current]);
 }
 
-void	ft_select(t_elem **elems, char key)
+void	ft_select(t_elem **elems)
 {
-	if (key == 's')
+	if (elems[g_data->current]->select == 0)
 	{
-		if (elems[g_data->current]->select == 0)
-		{
-			cursor_selected(elems[g_data->current]);
-			elems[g_data->current]->select = 1;
-		}
-		else
-		{
-			cursor_on(elems[g_data->current]);
-			elems[g_data->current]->select = 0;
-		}
-		ft_move('d', elems);
+		cursor_selected(elems[g_data->current]);
+		elems[g_data->current]->select = 1;
 	}
 	else
 	{
-		if (elems[g_data->current]->select == 1)
-		{
-			elems[g_data->current]->select = 0;
-			ft_move('d', elems);
-		}
-		else
-		{
-			cursor_on(elems[g_data->current]);
-			elems[g_data->current]->select = 0;
-		}
+		cursor_on(elems[g_data->current]);
+		elems[g_data->current]->select = 0;
 	}
+	ft_move('d', elems);
+}
+
+void	ft_delete(t_elem **elems)
+{
+	int	bu;
+	int	pos;
+	int	x;
+	int	y;
+
+	bu = g_data->current;
+	pos = bu;
+	if (elem_size(elems) == 0)
+		signal_handler(SIGKILL);
+	while (elems[bu + 1])
+	{
+		elems[bu] = elems[bu + 1];
+		bu++;
+	}
+	if (g_data->current == elem_size(elems))
+	{
+		ft_move('u', elems);
+		pos--;
+	}
+	x = g_data->cursor->x;
+	y = g_data->cursor->y;
+	ft_put("cl");
+	elems[bu] = NULL;
+	display_elems(g_data->elems, 0, 0);
+	elems[0]->select == 0 ? nothing(elems[0]) : selected(elems[0]);
+	g_data->current = pos;
+	move_cursor(x, y);
+	if (elems[pos]->select == 1)
+		cursor_selected(elems[pos]);
+	else
+		cursor_on(elems[pos]);
 }
 
 void	select_all(t_elem **elems)
@@ -492,7 +546,7 @@ void	select_all(t_elem **elems)
 	while (elems[i])
 	{
 		elems[i]->select = 0;
-		ft_select(g_data->elems, 's');
+		ft_select(g_data->elems);
 		i++;
 	}
 }
@@ -507,10 +561,21 @@ void	del_all(t_elem **elems)
 	while (elems[i])
 	{
 		elems[i]->select = 1;
-		ft_select(g_data->elems, 's');
+		ft_select(g_data->elems);
 		i++;
 	}
+}
 
+void	all_signals(void)
+{
+	signal(SIGWINCH, signal_handler);
+	signal(SIGABRT, signal_handler);
+	signal(SIGINT, signal_handler);
+	signal(SIGSTOP, signal_handler);
+	signal(SIGCONT, signal_handler);
+	signal(SIGTSTP, signal_handler);
+	signal(SIGKILL, signal_handler);
+	signal(SIGQUIT, signal_handler);
 }
 
 int		main(int argc, char **argv)
@@ -518,9 +583,7 @@ int		main(int argc, char **argv)
 	char	*line;
 
 	line = NULL;
-	signal(SIGINT, crashhandler);
-	signal(SIGSEGV, crashhandler);
-	signal(SIGWINCH, crashhandler);
+	all_signals();
 	if (argc < 2)
 	{
 		ft_putendl("ft_select: no file\nusage: ft_select [file ...]");
@@ -546,9 +609,9 @@ int		main(int argc, char **argv)
 		if (line && ft_strcmp(line, "down") == 0)
 			ft_move('d', g_data->elems);
 		if (line && ft_strcmp(line, "space") == 0)
-			ft_select(g_data->elems, 's');
+			ft_select(g_data->elems);
 		if (line && ft_strcmp(line, "del") == 0)
-			ft_select(g_data->elems, 'd');
+			ft_delete(g_data->elems);
 		if (line && ft_strcmp(line, "d_all") == 0)
 			del_all(g_data->elems);
 		if (line && ft_strcmp(line, "s_all") == 0)
@@ -556,7 +619,7 @@ int		main(int argc, char **argv)
 		if (line && ft_strcmp(line, "enter") == 0)
 			break ;
 		if (line && ft_strcmp(line, "echap") == 0)
-			crashhandler(0);
+			signal_handler(SIGKILL);
 	}
 	term_reset();
 	return_values(g_data->elems);
