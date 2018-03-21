@@ -6,7 +6,7 @@
 /*   By: lumenthi <marvin@42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2018/03/09 17:50:10 by lumenthi          #+#    #+#             */
-/*   Updated: 2018/03/21 14:55:54 by lumenthi         ###   ########.fr       */
+/*   Updated: 2018/03/21 19:44:02 by lumenthi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -58,15 +58,6 @@ void	term_reset(void)
 	close(g_data->ttyfd);
 }
 
-/*void	put_buf(char *buf)
-{
-	ft_putnbr(buf[0]);
-	ft_putchar(',');
-	ft_putnbr(buf[1]);
-	ft_putchar(',');
-	ft_putnbr(buf[2]);
-}*/
-
 char	*gnl(void)
 {
 	char	*line;
@@ -76,7 +67,6 @@ char	*gnl(void)
 	ft_put("ks"); // transmettre keypad
 	read(g_data->ttyfd, buf, 3);
 	ft_put("ke"); // fin reception keypad
-//	put_buf(buf); // afficher valeur touches
 	if (!g_data->cursor->error)
 	{
 		if (buf[0] == 27 && buf[1] == 79 && buf[2] == 65)
@@ -102,7 +92,7 @@ char	*gnl(void)
 	}
 	else
 	{
-		if ((buf[0] == 27 && buf[1] == 0 && buf[2] == 0) || buf[0] == 'q')
+		if (buf[0] == 27 && buf[1] == 0 && buf[2] == 0)
 			return ("echap");
 		return (gnl());
 	}
@@ -175,8 +165,7 @@ int		term_init(void)
 		return (0);
 	if (tcgetattr(0, g_data->bu) == -1) // backup old term in bu
 		return (0);
-	if (tcgetattr(0, term) == -1) // load term settings in term
-		return (0);
+	tcgetattr(0, term); // load term settings in term
 	term->c_lflag &= ~(ICANON); // mode canonique
 	term->c_lflag &= ~(ECHO); // les touches ne s'inscrivent plus
 	term->c_cc[VMIN] = 1; // return valeur de read tous VMIN character
@@ -354,7 +343,6 @@ void	signal_handler(int sig)
 	{
 		term_reset();
 		free_datas();
-		ft_putendl("crash or exit");
 		exit(1);
 	}
 }
