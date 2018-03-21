@@ -6,7 +6,7 @@
 /*   By: lumenthi <marvin@42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2018/03/09 17:50:10 by lumenthi          #+#    #+#             */
-/*   Updated: 2018/03/20 23:25:33 by lumenthi         ###   ########.fr       */
+/*   Updated: 2018/03/21 12:09:43 by lumenthi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -69,7 +69,7 @@ char	*gnl(void)
 			return ("up");
 		if ((buf[0] == 27 && buf[1] == 0 && buf[2] == 0) || buf[0] == 'q')
 			return ("echap");
-		if (buf[0] == 10 && buf[1] == 0 && buf[2] == 0)
+		if (buf[0] == 10)
 			return ("enter");
 		if (buf[0] == 27 && buf[1] == 79 && buf[2] == 66)
 			return ("down");
@@ -79,7 +79,7 @@ char	*gnl(void)
 			return ("left");
 		if (buf[0] == 32 && buf[1] == 0 && buf[2] == 0)
 			return ("space");
-		if (buf[0] == 127)
+		if (buf[0] == 127 || buf[0] == 72)
 			return ("del");
 		if (buf[0] == '+')
 			return ("s_all");
@@ -140,27 +140,12 @@ void	make_elems(int argc, char **argv)
 	g_data->elems[i] = NULL;
 }
 
-int		stop_init(void)
+void	data_init(void)
 {
-	char			*name_term;
-	struct	termios	*term;
-
-	if (!(name_term = getenv("TERM"))) // obtention variable TERM
-		return (0);
-	term = malloc(sizeof(struct termios));
-	tgetent(NULL, name_term); // loads termcaps for name_term
-	tcgetattr(0, term); // load term settings in term
-	term->c_lflag &= ~(ICANON); // mode canonique
-	term->c_lflag &= ~(ECHO); // les touches ne s'inscrivent plus
-	term->c_cc[VMIN] = 1; // return valeur de read tous VMIN character
-	term->c_cc[VTIME] = 0; // return valeur de read tous les n delais.
-	g_data->ttyfd = open("/dev/tty", O_RDWR);
-	tcsetattr(0, TCSADRAIN, term); // utilise term comme nouvelle config
-	ft_put("ti"); // debut programme deplacement curseur
-	ft_put("vi"); // invisible cursor
-	get_winsize();
-	free(term);
-	return (1);
+	g_data = malloc(sizeof(t_properties));
+	g_data->bu = malloc(sizeof(struct termios));
+	g_data->cursor = malloc(sizeof(t_cursor));
+	g_data->current = 0;
 }
 
 int		term_init(void)
@@ -170,11 +155,7 @@ int		term_init(void)
 
 	if (!(name_term = getenv("TERM"))) // obtention variable TERM
 		return (0);
-	g_data = malloc(sizeof(t_properties));
 	term = malloc(sizeof(struct termios));
-	g_data->bu = malloc(sizeof(struct termios));
-	g_data->cursor = malloc(sizeof(t_cursor));
-	g_data->current = 0;
 	tgetent(NULL, name_term); // loads termcaps for name_term
 	tcgetattr(0, g_data->bu); // backup old term in bu
 	tcgetattr(0, term); // load term settings in term
@@ -338,13 +319,15 @@ void	signal_handler(int sig)
 	if (sig == SIGTSTP)
 	{
 		term_reset();
-		signal(SIGTSTP, SIG_DFL);
-		ioctl(STDERR_FILENO, TIOCSTI, "\x1A");
+		signal(SIGTSTP, SIG_DFL); // set SIGSTOP with default comportement
+		ioctl(0, TIOCSTI, "\x1A"); // envoyer un SIGSTOP
 	}
 	if (sig == SIGCONT)
 	{
-		stop_init();
-		display_elems(g_data->elems, 0, 0);
+		term_init();
+		signal(SIGTSTP, signal_handler); // in case we want to sigstop again
+		display_elems(g_data->elems, 0, 0); // reafficher elements
+		ioctl(0, TIOCSTI, "\0"); // send NULL to read again
 	}
 	if (sig == SIGABRT || sig == SIGSTOP || sig == SIGQUIT || sig == SIGKILL ||
 		sig == SIGINT)
@@ -583,6 +566,7 @@ int		main(int argc, char **argv)
 	char	*line;
 
 	line = NULL;
+	data_init();
 	all_signals();
 	if (argc < 2)
 	{
