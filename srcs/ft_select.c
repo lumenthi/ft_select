@@ -6,7 +6,7 @@
 /*   By: lumenthi <marvin@42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2018/03/09 17:50:10 by lumenthi          #+#    #+#             */
-/*   Updated: 2018/03/21 12:09:43 by lumenthi         ###   ########.fr       */
+/*   Updated: 2018/03/21 14:55:54 by lumenthi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -33,15 +33,29 @@ void	get_winsize(void)
 	g_data->w_col = w.ws_col;
 }
 
+void	free_datas(void)
+{
+	int i;
+
+	i = 0;
+	free(g_data->bu);
+	free(g_data->cursor);
+	while (g_data->elems[i])
+	{
+		free(g_data->elems[i]->name);
+		free(g_data->elems[i]);
+		i++;
+	}
+	free(g_data->elems);
+	free(g_data);
+}
+
 void	term_reset(void)
 {
 	ft_put("ve"); // make cursor visible again
 	ft_put("te"); // fin du programme deplacement curseur
 	tcsetattr(0, 0, g_data->bu); // set l'ancienne config du terminal
 	close(g_data->ttyfd);
-//	free(g_data->bu);
-//	free(g_data->cursor);
-//	free(g_data);
 }
 
 /*void	put_buf(char *buf)
@@ -102,7 +116,8 @@ char	*get_color(t_elem *elems)
 		return (BLUE);
 	else if (ft_strcmp(elems->name, "") == 0)
 	{
-		elems->name = "no_name";
+		free(elems->name);
+		elems->name = ft_strdup("no_name");
 		return (BLACK);
 	}
 	else if (elems->name[ft_strlen(elems->name) - 1] == 'h' &&
@@ -156,15 +171,20 @@ int		term_init(void)
 	if (!(name_term = getenv("TERM"))) // obtention variable TERM
 		return (0);
 	term = malloc(sizeof(struct termios));
-	tgetent(NULL, name_term); // loads termcaps for name_term
-	tcgetattr(0, g_data->bu); // backup old term in bu
-	tcgetattr(0, term); // load term settings in term
+	if (tgetent(NULL, name_term) <= 0) // loads termcaps for name_term
+		return (0);
+	if (tcgetattr(0, g_data->bu) == -1) // backup old term in bu
+		return (0);
+	if (tcgetattr(0, term) == -1) // load term settings in term
+		return (0);
 	term->c_lflag &= ~(ICANON); // mode canonique
 	term->c_lflag &= ~(ECHO); // les touches ne s'inscrivent plus
 	term->c_cc[VMIN] = 1; // return valeur de read tous VMIN character
 	term->c_cc[VTIME] = 0; // return valeur de read tous les n delais.
-	g_data->ttyfd = open("/dev/tty", O_RDWR); // ouvre ttyfd pour ecrire dessus
-	tcsetattr(0, TCSADRAIN, term); // utilise term comme nouvelle config
+	if ((g_data->ttyfd = open("/dev/tty", O_RDWR)) == -1) // ouvre ttyfd
+		return (0);
+	if (tcsetattr(0, TCSADRAIN, term) == -1)  // utilise term comme nouvelle config
+		return (0);
 	ft_put("ti"); // debut programme deplacement curseur
 	ft_put("vi"); // invisible cursor
 	get_winsize();
@@ -333,6 +353,7 @@ void	signal_handler(int sig)
 		sig == SIGINT)
 	{
 		term_reset();
+		free_datas();
 		ft_putendl("crash or exit");
 		exit(1);
 	}
@@ -495,6 +516,8 @@ void	ft_delete(t_elem **elems)
 	pos = bu;
 	if (elem_size(elems) == 0)
 		signal_handler(SIGKILL);
+	free(elems[bu]->name);
+	free(elems[bu]);
 	while (elems[bu + 1])
 	{
 		elems[bu] = elems[bu + 1];
@@ -575,7 +598,7 @@ int		main(int argc, char **argv)
 	}
 	if (!term_init())
 	{
-		ft_putendl("ft_select: TERM variable not set, exiting.");
+		ft_putendl("ft_select: init error, exiting.");
 		return (0);
 	}
 	make_elems(argc, argv);
@@ -607,5 +630,6 @@ int		main(int argc, char **argv)
 	}
 	term_reset();
 	return_values(g_data->elems);
+	free_datas();
 	return (0);
 }
