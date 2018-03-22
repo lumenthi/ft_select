@@ -6,7 +6,7 @@
 #    By: lumenthi <marvin@42.fr>                    +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2017/12/22 14:06:43 by lumenthi          #+#    #+#              #
-#    Updated: 2018/03/09 17:45:29 by lumenthi         ###   ########.fr        #
+#    Updated: 2018/03/22 17:42:42 by lumenthi         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -24,7 +24,17 @@ OBJDIR = objs
 LIBFT = $(LIBDIR)/libft.a
 LIBFT_OBJ = $(LIBDIR)/objs
 
-SRCS = ft_select.c
+SRCS = ft_select.c \
+	   ft_move.c \
+	   ft_init.c \
+	   ft_tools.c \
+	   ft_tools2.c \
+	   ft_tools3.c \
+	   ft_key.c \
+	   ft_end.c \
+	   ft_display.c \
+	   ft_signal.c \
+	   ft_gnl.c
 
 SOURCES = $(addprefix $(SRCDIR)/, $(SRCS))
 INCLUDES = $(addprefix -I, $(INCDIR))
