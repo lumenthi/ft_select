@@ -6,7 +6,7 @@
 /*   By: lumenthi <marvin@42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2018/02/08 11:22:09 by lumenthi          #+#    #+#             */
-/*   Updated: 2018/03/22 17:54:04 by lumenthi         ###   ########.fr       */
+/*   Updated: 2018/03/22 22:02:04 by lumenthi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,7 +25,6 @@
 # include <termios.h>
 # include <term.h>
 # include <unistd.h>
-# include <stdio.h>
 # include <stdlib.h>
 # include <signal.h>
 # include <sys/ioctl.h>

@@ -6,7 +6,7 @@
 /*   By: lumenthi <marvin@42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2018/03/22 17:39:18 by lumenthi          #+#    #+#             */
-/*   Updated: 2018/03/22 17:55:30 by lumenthi         ###   ########.fr       */
+/*   Updated: 2018/03/22 22:07:13 by lumenthi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,7 +16,7 @@ static char	*gnl_ret(char *buf)
 {
 	if (buf[0] == 27 && buf[1] == 79 && buf[2] == 65)
 		return ("up");
-	if ((buf[0] == 27 && buf[1] == 0 && buf[2] == 0) || buf[0] == 'q')
+	if (buf[0] == 27 && buf[1] == 0 && buf[2] == 0)
 		return ("echap");
 	if (buf[0] == 10)
 		return ("enter");
