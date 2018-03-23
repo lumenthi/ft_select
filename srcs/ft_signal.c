@@ -6,7 +6,7 @@
 /*   By: lumenthi <marvin@42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2018/03/22 16:39:05 by lumenthi          #+#    #+#             */
-/*   Updated: 2018/03/22 17:58:23 by lumenthi         ###   ########.fr       */
+/*   Updated: 2018/03/23 14:47:59 by lumenthi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -28,16 +28,17 @@ void		signal_handler(int sig)
 		get_winsize();
 		display_elems(g_data->elems, 0, 0);
 	}
-	if (sig == SIGTSTP)
+	else if (sig == SIGTSTP)
 	{
 		term_reset();
 		signal(SIGTSTP, SIG_DFL);
 		ioctl(0, TIOCSTI, "\x1A");
 	}
-	if (sig == SIGCONT)
+	else if (sig == SIGCONT)
 		signal_cont();
-	if (sig == SIGABRT || sig == SIGSTOP || sig == SIGQUIT || sig == SIGKILL ||
-		sig == SIGINT)
+	else if (sig == SIGABRT || sig == SIGSTOP || sig == SIGQUIT
+			|| sig == SIGKILL || sig == SIGINT || sig == SIGTERM ||
+			sig == SIGALRM || sig == SIGHUP || sig == SIGPIPE)
 	{
 		term_reset();
 		free_datas();
@@ -55,4 +56,8 @@ void		all_signals(void)
 	signal(SIGTSTP, signal_handler);
 	signal(SIGKILL, signal_handler);
 	signal(SIGQUIT, signal_handler);
+	signal(SIGTERM, signal_handler);
+	signal(SIGALRM, signal_handler);
+	signal(SIGHUP, signal_handler);
+	signal(SIGPIPE, signal_handler);
 }

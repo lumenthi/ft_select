@@ -6,7 +6,7 @@
 /*   By: lumenthi <marvin@42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2018/02/08 11:22:09 by lumenthi          #+#    #+#             */
-/*   Updated: 2018/03/22 22:02:04 by lumenthi         ###   ########.fr       */
+/*   Updated: 2018/03/23 13:25:30 by lumenthi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -71,8 +71,8 @@ void				nothing(t_elem *elems);
 void				cursor_on(t_elem *elems);
 void				ft_put(char *str);
 void				get_winsize(void);
-void				make_elems(int argc, char **argv);
-void				data_init(void);
+int					make_elems(int argc, char **argv);
+int					data_init(void);
 int					term_init(void);
 int					my_outc(int c);
 int					get_current_max(int s, t_elem **elems);

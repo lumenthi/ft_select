@@ -6,7 +6,7 @@
 /*   By: lumenthi <marvin@42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2018/03/22 11:58:32 by lumenthi          #+#    #+#             */
-/*   Updated: 2018/03/22 17:56:05 by lumenthi         ###   ########.fr       */
+/*   Updated: 2018/03/23 13:34:24 by lumenthi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -36,17 +36,21 @@ static char	*get_color(t_elem *elems)
 		return (GRAY);
 }
 
-void		make_elems(int argc, char **argv)
+int			make_elems(int argc, char **argv)
 {
 	int		i;
 
 	i = 0;
 	g_data->max_spaces = 0;
-	g_data->elems = (t_elem **)malloc(sizeof(t_elem *) * argc);
+	if (!(g_data->elems = (t_elem **)malloc(sizeof(t_elem *) * argc)))
+		return (0);
 	argv++;
 	while (argv[i])
 	{
-		g_data->elems[i] = (t_elem *)malloc(sizeof(t_elem));
+		if (!(g_data->elems[i] = (t_elem *)malloc(sizeof(t_elem))))
+			return (0);
+		if (!(g_data->elems[i] = (t_elem *)malloc(sizeof(t_elem))))
+			return (0);
 		g_data->elems[i]->name = ft_strdup(argv[i]);
 		g_data->elems[i]->len = ft_strlen(argv[i]);
 		g_data->elems[i]->select = 0;
@@ -56,14 +60,28 @@ void		make_elems(int argc, char **argv)
 		i++;
 	}
 	g_data->elems[i] = NULL;
+	return (1);
 }
 
-void		data_init(void)
+int			data_init(void)
 {
-	g_data = malloc(sizeof(t_properties));
-	g_data->bu = malloc(sizeof(struct termios));
-	g_data->cursor = malloc(sizeof(t_cursor));
+	if (!(g_data = malloc(sizeof(t_properties))))
+		return (0);
+	if (!(g_data->bu = malloc(sizeof(struct termios))))
+		return (0);
+	if (!(g_data->cursor = malloc(sizeof(t_cursor))))
+		return (0);
 	g_data->current = 0;
+	return (1);
+}
+
+static void	flag_init(struct termios *term)
+{
+	term->c_lflag &= ~(ICANON);
+	term->c_lflag &= ~(ECHO);
+	term->c_lflag &= ~(ISIG);
+	term->c_cc[VMIN] = 1;
+	term->c_cc[VTIME] = 0;
 }
 
 int			term_init(void)
@@ -73,16 +91,15 @@ int			term_init(void)
 
 	if (!(name_term = getenv("TERM")))
 		return (0);
-	term = malloc(sizeof(struct termios));
+	if (!(term = malloc(sizeof(struct termios))))
+		return (0);
 	if (tgetent(NULL, name_term) <= 0)
 		return (0);
 	if (tcgetattr(0, g_data->bu) == -1)
 		return (0);
-	tcgetattr(0, term);
-	term->c_lflag &= ~(ICANON);
-	term->c_lflag &= ~(ECHO);
-	term->c_cc[VMIN] = 1;
-	term->c_cc[VTIME] = 0;
+	if (tcgetattr(0, term) == -1)
+		return (0);
+	flag_init(term);
 	if ((g_data->ttyfd = open("/dev/tty", O_RDWR)) == -1)
 		return (0);
 	if (tcsetattr(0, TCSADRAIN, term) == -1)

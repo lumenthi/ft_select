@@ -6,13 +6,13 @@
 /*   By: lumenthi <marvin@42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2018/03/22 16:21:44 by lumenthi          #+#    #+#             */
-/*   Updated: 2018/03/22 16:35:40 by lumenthi         ###   ########.fr       */
+/*   Updated: 2018/03/23 14:45:28 by lumenthi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../includes/ft_select.h"
 
-static void	ft_display(t_elem **elems, int i, int s, int x)
+static void		ft_display(t_elem **elems, int i, int s, int x)
 {
 	move_cursor(x, g_data->cursor->y);
 	if (s + i == 0)
@@ -32,7 +32,7 @@ static void	ft_display(t_elem **elems, int i, int s, int x)
 	g_data->cursor->y++;
 }
 
-static void	ft_repeat(t_elem **elems, int *s, int *x, int *current_max)
+static void		ft_repeat(t_elem **elems, int *s, int *x, int *current_max)
 {
 	*s = *s + g_data->w_row;
 	*x = *x + g_data->max_spaces;
@@ -49,20 +49,42 @@ static void	ft_repeat(t_elem **elems, int *s, int *x, int *current_max)
 		display_elems(elems, *s, *x);
 }
 
-void		display_elems(t_elem **elems, int s, int x)
+static void		ft_nodisp(void)
+{
+	ft_put("cl");
+	ft_putstr_fd(RED, g_data->ttyfd);
+	ft_putendl_fd("Screen is too small", g_data->ttyfd);
+	ft_putstr_fd(BLANK, g_data->ttyfd);
+	g_data->cursor->error = 1;
+}
+
+static void		display_init(int *current_max, int *i)
+{
+	*i = 0;
+	*current_max = 0;
+	move_cursor(0, 0);
+	g_data->current = 0;
+	g_data->cursor->error = 0;
+}
+
+void			display_elems(t_elem **elems, int s, int x)
 {
 	int	i;
 	int	current_max;
 
-	i = 0;
-	current_max = 0;
-	move_cursor(0, 0);
-	g_data->current = 0;
-	g_data->cursor->error = 0;
+	display_init(&current_max, &i);
 	while (elems[s + i])
 	{
 		if (i < g_data->w_row)
-			ft_display(elems, i, s, x);
+		{
+			if ((int)ft_strlen(elems[s + i]->name) <= g_data->w_col)
+				ft_display(elems, i, s, x);
+			else
+			{
+				ft_nodisp();
+				break ;
+			}
+		}
 		else
 		{
 			ft_repeat(elems, &s, &x, &current_max);

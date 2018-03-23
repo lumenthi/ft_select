@@ -6,7 +6,7 @@
 /*   By: lumenthi <marvin@42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2018/03/09 17:50:10 by lumenthi          #+#    #+#             */
-/*   Updated: 2018/03/22 17:57:32 by lumenthi         ###   ########.fr       */
+/*   Updated: 2018/03/23 13:32:40 by lumenthi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -57,11 +57,13 @@ int			main(int argc, char **argv)
 	char	*line;
 
 	line = NULL;
-	data_init();
+	if (!(data_init()))
+		return (0);
 	all_signals();
 	if (error_main(argc))
 		return (0);
-	make_elems(argc, argv);
+	if (!(make_elems(argc, argv)))
+		return (0);
 	ft_put("cl");
 	display_elems(g_data->elems, 0, 0);
 	while (1)
