@@ -6,7 +6,7 @@
 /*   By: lumenthi <marvin@42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2018/03/22 11:58:32 by lumenthi          #+#    #+#             */
-/*   Updated: 2018/03/23 15:35:04 by lumenthi         ###   ########.fr       */
+/*   Updated: 2018/03/23 18:16:57 by lumenthi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -54,9 +54,10 @@ int			make_elems(int argc, char **argv)
 		g_data->elems[i]->select = 0;
 		g_data->elems[i]->color = get_color(g_data->elems[i]);
 		if (g_data->max_spaces < g_data->elems[i]->len)
-			g_data->max_spaces = g_data->elems[i]->len + 2;
+			g_data->max_spaces = g_data->elems[i]->len;
 		i++;
 	}
+	g_data->max_spaces++;
 	g_data->elems[i] = NULL;
 	return (1);
 }
