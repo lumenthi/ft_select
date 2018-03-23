@@ -6,7 +6,7 @@
 /*   By: lumenthi <marvin@42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2018/03/22 17:39:18 by lumenthi          #+#    #+#             */
-/*   Updated: 2018/03/22 22:07:13 by lumenthi         ###   ########.fr       */
+/*   Updated: 2018/03/23 10:45:47 by lumenthi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -28,7 +28,7 @@ static char	*gnl_ret(char *buf)
 		return ("left");
 	if (buf[0] == 32 && buf[1] == 0 && buf[2] == 0)
 		return ("space");
-	if (buf[0] == 127 || buf[0] == 72)
+	if (buf[0] == 127 || buf[0] == 126)
 		return ("del");
 	if (buf[0] == '+')
 		return ("s_all");
