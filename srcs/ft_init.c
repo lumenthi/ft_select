@@ -6,7 +6,7 @@
 /*   By: lumenthi <marvin@42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2018/03/22 11:58:32 by lumenthi          #+#    #+#             */
-/*   Updated: 2018/03/23 13:34:24 by lumenthi         ###   ########.fr       */
+/*   Updated: 2018/03/23 14:58:00 by lumenthi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -47,8 +47,6 @@ int			make_elems(int argc, char **argv)
 	argv++;
 	while (argv[i])
 	{
-		if (!(g_data->elems[i] = (t_elem *)malloc(sizeof(t_elem))))
-			return (0);
 		if (!(g_data->elems[i] = (t_elem *)malloc(sizeof(t_elem))))
 			return (0);
 		g_data->elems[i]->name = ft_strdup(argv[i]);
