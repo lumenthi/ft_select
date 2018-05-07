@@ -6,7 +6,7 @@
 /*   By: lumenthi <marvin@42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2018/03/22 11:58:32 by lumenthi          #+#    #+#             */
-/*   Updated: 2018/05/02 14:27:55 by lumenthi         ###   ########.fr       */
+/*   Updated: 2018/05/07 11:15:23 by lumenthi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -76,7 +76,6 @@ int			data_init(void)
 
 static void	flag_init(struct termios *term)
 {
-	term->c_lflag &= ~(ISIG);
 	term->c_lflag &= ~(ICANON);
 	term->c_lflag &= ~(ECHO);
 	term->c_cc[VMIN] = 1;
